@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAP Customer Risk Monitor</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3250;
+    --accent: #4f8ef7;
+    --accent2: #7c5cfc;
+    --green: #22c55e;
+    --yellow: #f59e0b;
+    --red: #ef4444;
+    --orange: #f97316;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; }
+
+  /* NAV */
+  nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; align-items: center; gap: 1rem; height: 58px; }
+  .nav-logo { font-size: 1.1rem; font-weight: 700; color: var(--accent); letter-spacing: -.3px; }
+  .nav-logo span { color: var(--text); }
+  .nav-badge { background: var(--accent2); color: #fff; font-size: .65rem; font-weight: 700; padding: 2px 7px; border-radius: 20px; text-transform: uppercase; letter-spacing: .5px; }
+
+  /* HERO */
+  .hero { text-align: center; padding: 3.5rem 1rem 2rem; }
+  .hero h1 { font-size: 2.4rem; font-weight: 800; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: .6rem; }
+  .hero p { color: var(--muted); font-size: 1rem; max-width: 560px; margin: 0 auto; }
+
+  /* TABLE LIST */
+  .table-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: .75rem; max-width: 900px; margin: 2rem auto; padding: 0 1.5rem; }
+  .tcard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.2rem; display: flex; align-items: flex-start; gap: .75rem; }
+  .tcard-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+  .tcard-name { font-size: .85rem; font-weight: 700; color: var(--text); }
+  .tcard-desc { font-size: .72rem; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+  .badge-req { font-size: .6rem; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: #1e3a5f; color: var(--accent); margin-left: 5px; }
+
+  /* UPLOAD FORM */
+  .upload-wrap { max-width: 720px; margin: 0 auto 3rem; padding: 0 1.5rem; }
+  .upload-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem; }
+  .upload-card h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1.5rem; color: var(--text); display: flex; align-items: center; gap: .5rem; }
+  .file-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media(max-width:560px){ .file-grid { grid-template-columns: 1fr; } }
+
+  .file-row { display: flex; flex-direction: column; gap: .35rem; }
+  .file-label { font-size: .8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; display: flex; align-items: center; gap: .4rem; }
+  .file-label .tag { font-size: .65rem; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); padding: 1px 6px; border-radius: 4px; }
+
+  .drop-zone { position: relative; border: 1.5px dashed var(--border); border-radius: 8px; padding: .75rem 1rem; display: flex; align-items: center; gap: .6rem; cursor: pointer; transition: border-color .2s, background .2s; background: var(--bg); }
+  .drop-zone:hover, .drop-zone.active { border-color: var(--accent); background: rgba(79,142,247,.06); }
+  .drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .drop-icon { font-size: 1.2rem; }
+  .drop-text { font-size: .8rem; color: var(--muted); }
+  .drop-text strong { color: var(--text); }
+  .drop-name { font-size: .75rem; color: var(--green); font-weight: 600; display: none; }
+
+  .submit-row { margin-top: 1.5rem; display: flex; align-items: center; gap: 1rem; }
+  .btn-analyze { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; border: none; border-radius: 8px; padding: .75rem 2rem; font-size: .95rem; font-weight: 700; cursor: pointer; transition: opacity .2s; }
+  .btn-analyze:hover { opacity: .9; }
+  .btn-analyze:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* PROGRESS */
+  .progress-wrap { display: none; flex-direction: column; gap: .5rem; }
+  .progress-bar-bg { height: 6px; background: var(--surface2); border-radius: 99px; overflow: hidden; }
+  .progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 99px; transition: width .4s ease; }
+  .progress-label { font-size: .78rem; color: var(--muted); }
+
+  /* ALERTS */
+  .alert { display: none; padding: .75rem 1rem; border-radius: 8px; font-size: .85rem; margin-top: 1rem; }
+  .alert-err  { background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.3); color: #fca5a5; }
+  .alert-warn { background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.3); color: #fcd34d; }
+  .alert.show { display: block; }
+
+  /* MSG BANNER */
+  .msg-banner { background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.3); color: #fcd34d; padding: .7rem 1.2rem; border-radius: 8px; font-size: .85rem; max-width: 720px; margin: 0 auto 1rem; text-align: center; }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-logo">SAP <span>Customer Risk</span></span>
+  <span class="nav-badge">AR Analytics</span>
+</nav>
+
+{% set msg = request.args.get('msg','') %}
+{% if msg == 'no_session' %}
+<div class="msg-banner" style="margin-top:1rem;">⚠️ No active session found. Please upload your SAP data to begin.</div>
+{% elif msg == 'expired' %}
+<div class="msg-banner" style="margin-top:1rem;">⏱ Your session has expired. Please re-upload your SAP data.</div>
+{% endif %}
+
+<div class="hero">
+  <h1>Customer Aging &amp; Risk Analysis</h1>
+  <p>Upload six SAP Accounts Receivable tables to identify overdue invoices, assess credit risk, and prioritise collections using machine learning.</p>
+</div>
+
+<!-- TABLE INFO CARDS -->
+<div class="table-grid">
+  <div class="tcard">
+    <div class="tcard-icon" style="background:rgba(79,142,247,.15);color:var(--accent);">📋</div>
+    <div><div class="tcard-name">BSID <span class="badge-req">mandatory</span></div><div class="tcard-desc">Open customer invoices — core AR source for aging</div></div>
+  </div>
+  <div class="tcard">
+    <div class="tcard-icon" style="background:rgba(34,197,94,.15);color:var(--green);">✅</div>
+    <div><div class="tcard-name">BSAD <span class="badge-req">mandatory</span></div><div class="tcard-desc">Cleared invoices — reveals historical payment behaviour</div></div>
+  </div>
+  <div class="tcard">
+    <div class="tcard-icon" style="background:rgba(245,158,11,.15);color:var(--yellow);">📄</div>
+    <div><div class="tcard-name">BKPF <span class="badge-req">mandatory</span></div><div class="tcard-desc">FI document headers — filters to valid AR doc types</div></div>
+  </div>
+  <div class="tcard">
+    <div class="tcard-icon" style="background:rgba(124,92,252,.15);color:var(--accent2);">🏢</div>
+    <div><div class="tcard-name">KNA1 <span class="badge-req">mandatory</span></div><div class="tcard-desc">Customer master — names, country, city</div></div>
+  </div>
+  <div class="tcard">
+    <div class="tcard-icon" style="background:rgba(249,115,22,.15);color:var(--orange);">🏦</div>
+    <div><div class="tcard-name">KNB1 <span class="badge-req">mandatory</span></div><div class="tcard-desc">Company-code data — payment terms, block indicator</div></div>
+  </div>
+  <div class="tcard">
+    <div class="tcard-icon" style="background:rgba(239,68,68,.15);color:var(--red);">💳</div>
+    <div><div class="tcard-name">KNKK <span class="badge-req">mandatory</span></div><div class="tcard-desc">Credit management — limit, open balance, SAP risk class</div></div>
+  </div>
+</div>
+
+<!-- UPLOAD FORM -->
+<div class="upload-wrap">
+  <div class="upload-card">
+    <h2>📂 Upload SAP CSV Exports</h2>
+    <form id="uploadForm">
+      <div class="file-grid">
+
+        <div class="file-row">
+          <div class="file-label">BSID <span class="tag">Open Items</span></div>
+          <div class="drop-zone" id="dz-bsid">
+            <input type="file" name="bsid_file" id="f-bsid" accept=".csv">
+            <span class="drop-icon">📋</span>
+            <div><div class="drop-text"><strong>Choose file</strong> or drag</div><div class="drop-name" id="dn-bsid"></div></div>
+          </div>
+        </div>
+
+        <div class="file-row">
+          <div class="file-label">BSAD <span class="tag">Cleared Items</span></div>
+          <div class="drop-zone" id="dz-bsad">
+            <input type="file" name="bsad_file" id="f-bsad" accept=".csv">
+            <span class="drop-icon">✅</span>
+            <div><div class="drop-text"><strong>Choose file</strong> or drag</div><div class="drop-name" id="dn-bsad"></div></div>
+          </div>
+        </div>
+
+        <div class="file-row">
+          <div class="file-label">BKPF <span class="tag">Doc Headers</span></div>
+          <div class="drop-zone" id="dz-bkpf">
+            <input type="file" name="bkpf_file" id="f-bkpf" accept=".csv">
+            <span class="drop-icon">📄</span>
+            <div><div class="drop-text"><strong>Choose file</strong> or drag</div><div class="drop-name" id="dn-bkpf"></div></div>
+          </div>
+        </div>
+
+        <div class="file-row">
+          <div class="file-label">KNA1 <span class="tag">Customer Master</span></div>
+          <div class="drop-zone" id="dz-kna1">
+            <input type="file" name="kna1_file" id="f-kna1" accept=".csv">
+            <span class="drop-icon">🏢</span>
+            <div><div class="drop-text"><strong>Choose file</strong> or drag</div><div class="drop-name" id="dn-kna1"></div></div>
+          </div>
+        </div>
+
+        <div class="file-row">
+          <div class="file-label">KNB1 <span class="tag">Company Code</span></div>
+          <div class="drop-zone" id="dz-knb1">
+            <input type="file" name="knb1_file" id="f-knb1" accept=".csv">
+            <span class="drop-icon">🏦</span>
+            <div><div class="drop-text"><strong>Choose file</strong> or drag</div><div class="drop-name" id="dn-knb1"></div></div>
+          </div>
+        </div>
+
+        <div class="file-row">
+          <div class="file-label">KNKK <span class="tag">Credit Mgmt</span></div>
+          <div class="drop-zone" id="dz-knkk">
+            <input type="file" name="knkk_file" id="f-knkk" accept=".csv">
+            <span class="drop-icon">💳</span>
+            <div><div class="drop-text"><strong>Choose file</strong> or drag</div><div class="drop-name" id="dn-knkk"></div></div>
+          </div>
+        </div>
+
+      </div><!-- file-grid -->
+
+      <div class="alert alert-err"  id="errAlert"></div>
+      <div class="alert alert-warn" id="warnAlert"></div>
+
+      <div class="submit-row">
+        <button type="submit" class="btn-analyze" id="btnAnalyze">🔍 Run Analysis</button>
+        <div class="progress-wrap" id="progressWrap">
+          <div class="progress-bar-bg"><div class="progress-bar" id="progressBar"></div></div>
+          <div class="progress-label" id="progressLabel">Uploading files…</div>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+const FILES = ['bsid','bsad','bkpf','kna1','knb1','knkk'];
+
+// File-name preview on selection
+FILES.forEach(id => {
+  const inp = document.getElementById('f-' + id);
+  const dz  = document.getElementById('dz-' + id);
+  const dn  = document.getElementById('dn-' + id);
+  inp.addEventListener('change', () => {
+    if (inp.files[0]) {
+      dn.textContent = inp.files[0].name;
+      dn.style.display = 'block';
+      dz.querySelector('.drop-text').style.display = 'none';
+      dz.style.borderColor = 'var(--green)';
+    }
+  });
+});
+
+// Progress label steps
+const STEPS = [
+  [10,  'Uploading files…'],
+  [30,  'Loading SAP tables…'],
+  [50,  'Filtering & cleaning data…'],
+  [65,  'Computing aging buckets…'],
+  [78,  'Engineering features…'],
+  [88,  'Running K-Means clustering…'],
+  [95,  'Building risk scores…'],
+  [100, 'Finalising results…'],
+];
+
+function animateProgress() {
+  let i = 0;
+  function step() {
+    if (i >= STEPS.length) return;
+    document.getElementById('progressBar').style.width   = STEPS[i][0] + '%';
+    document.getElementById('progressLabel').textContent = STEPS[i][1];
+    i++;
+    setTimeout(step, 900);
+  }
+  step();
+}
+
+document.getElementById('uploadForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const errAlert  = document.getElementById('errAlert');
+  const warnAlert = document.getElementById('warnAlert');
+  errAlert.classList.remove('show');
+  warnAlert.classList.remove('show');
+
+  // Validate all 6 files selected
+  for (const id of FILES) {
+    const inp = document.getElementById('f-' + id);
+    if (!inp.files[0]) {
+      errAlert.textContent = `Please select a CSV file for ${id.toUpperCase()}.`;
+      errAlert.classList.add('show');
+      return;
+    }
+  }
+
+  const btn = document.getElementById('btnAnalyze');
+  btn.disabled = true;
+  document.getElementById('progressWrap').style.display = 'flex';
+  animateProgress();
+
+  const fd = new FormData(e.target);
+
+  let resp, errorMsg;
+  try {
+    resp = await fetch('/analyze', { method: 'POST', body: fd });
+  } catch (netErr) {
+    btn.disabled = false;
+    document.getElementById('progressWrap').style.display = 'none';
+    errAlert.textContent = 'Network error: ' + netErr.message;
+    errAlert.classList.add('show');
+    return;
+  }
+
+  // Always read as text first — safe regardless of Content-Type
+  const rawText = await resp.text();
+
+  if (resp.ok) {
+    try {
+      const json = JSON.parse(rawText);
+      if (json.status === 'ok') { window.location.href = '/results'; return; }
+      errorMsg = json.error || 'Analysis failed.';
+    } catch (_) {
+      errorMsg = 'Unexpected server response. Check server logs.';
+    }
+  } else {
+    // Try to extract a clean message from JSON or HTML
+    try {
+      const json = JSON.parse(rawText);
+      errorMsg = json.error || `Server error ${resp.status}`;
+    } catch (_) {
+      // HTML error page — pull <title> or first <p>
+      const titleMatch = rawText.match(/<title[^>]*>([^<]+)<\/title>/i);
+      const pMatch     = rawText.match(/<p[^>]*>([^<]{10,200})<\/p>/i);
+      errorMsg = titleMatch ? titleMatch[1].trim()
+               : pMatch     ? pMatch[1].trim()
+               : `Server returned HTTP ${resp.status}. Check that all files are valid CSVs.`;
+    }
+  }
+
+  btn.disabled = false;
+  document.getElementById('progressWrap').style.display = 'none';
+  errAlert.textContent = errorMsg;
+  errAlert.classList.add('show');
+});
+</script>
+</body>
+</html>

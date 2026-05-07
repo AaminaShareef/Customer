@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Insights — SAP Customer Risk Monitor</title>
+<style>
+  :root {
+    --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3250;
+    --accent:#4f8ef7;--accent2:#7c5cfc;--green:#22c55e;--yellow:#f59e0b;
+    --red:#ef4444;--orange:#f97316;--text:#e2e8f0;--muted:#64748b;--radius:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;min-height:100vh;}
+
+  nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;gap:1rem;height:58px;}
+  .nav-logo{font-size:1.05rem;font-weight:700;color:var(--accent);}
+  .nav-logo span{color:var(--text);}
+  .nav-links{margin-left:auto;display:flex;gap:.25rem;}
+  .nav-link{padding:.4rem .85rem;border-radius:6px;font-size:.82rem;font-weight:500;color:var(--muted);text-decoration:none;transition:background .15s,color .15s;}
+  .nav-link:hover{background:var(--surface2);color:var(--text);}
+  .nav-link.active{background:var(--surface2);color:var(--accent);}
+
+  main{max-width:1200px;margin:0 auto;padding:1.5rem;display:grid;grid-template-columns:1fr 420px;gap:1.25rem;}
+  @media(max-width:900px){main{grid-template-columns:1fr;}}
+
+  /* LEFT COLUMN */
+  .left-col{display:flex;flex-direction:column;gap:1.25rem;}
+
+  /* SNAPSHOT CARDS */
+  .snap-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.6rem;}
+  .snap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.9rem 1rem;}
+  .snap-label{font-size:.68rem;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:.35rem;}
+  .snap-value{font-size:1.4rem;font-weight:800;}
+  .snap-sub{font-size:.68rem;color:var(--muted);margin-top:.2rem;}
+
+  /* INSIGHT CARDS */
+  .insights-wrap{display:flex;flex-direction:column;gap:.75rem;}
+  .insight-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.1rem 1.2rem;border-left:3px solid var(--accent);}
+  .insight-card.warn{border-left-color:var(--yellow);}
+  .insight-card.danger{border-left-color:var(--red);}
+  .insight-card.ok{border-left-color:var(--green);}
+  .insight-title{font-size:.85rem;font-weight:700;margin-bottom:.4rem;display:flex;align-items:center;gap:.4rem;}
+  .insight-body{font-size:.8rem;color:var(--muted);line-height:1.6;}
+  .insight-body strong{color:var(--text);}
+  .insight-body ul{margin:.4rem 0 0 1rem;}
+  .insight-body li{margin-bottom:.2rem;}
+
+  .skeleton{background:linear-gradient(90deg,var(--surface2) 25%,var(--border) 50%,var(--surface2) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:6px;height:14px;}
+  @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+  .skeleton-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.1rem 1.2rem;display:flex;flex-direction:column;gap:.5rem;}
+
+  .btn-regen{background:rgba(79,142,247,.15);border:1px solid rgba(79,142,247,.3);color:var(--accent);border-radius:6px;padding:.4rem 1rem;font-size:.78rem;cursor:pointer;font-weight:600;width:fit-content;}
+  .btn-regen:hover{background:rgba(79,142,247,.25);}
+  .btn-regen:disabled{opacity:.4;cursor:not-allowed;}
+  .section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;}
+  .section-title{font-size:.95rem;font-weight:700;}
+
+  /* RIGHT: CHATBOT */
+  .chat-col{display:flex;flex-direction:column;gap:0;}
+  .chat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);display:flex;flex-direction:column;height:calc(100vh - 100px);min-height:500px;}
+  .chat-header{padding:.9rem 1.1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.5rem;}
+  .chat-header-title{font-size:.9rem;font-weight:700;}
+  .chat-online{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;}
+  .chat-messages{flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:.75rem;}
+  .chat-messages::-webkit-scrollbar{width:4px;}
+  .chat-messages::-webkit-scrollbar-track{background:transparent;}
+  .chat-messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px;}
+
+  .msg{max-width:88%;display:flex;flex-direction:column;gap:.25rem;}
+  .msg-user{align-self:flex-end;}
+  .msg-ai{align-self:flex-start;}
+  .msg-bubble{padding:.65rem .85rem;border-radius:10px;font-size:.8rem;line-height:1.55;}
+  .msg-user .msg-bubble{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border-bottom-right-radius:3px;}
+  .msg-ai   .msg-bubble{background:var(--surface2);color:var(--text);border-bottom-left-radius:3px;}
+  .msg-ai   .msg-bubble strong{color:var(--accent);}
+  .msg-ai   .msg-bubble ul{margin:.3rem 0 0 1rem;}
+  .msg-ai   .msg-bubble li{margin-bottom:.2rem;}
+  .msg-time{font-size:.65rem;color:var(--muted);}
+
+  .typing{display:flex;gap:.3rem;align-items:center;padding:.5rem .85rem;}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:bounce .9s infinite;}
+  .dot:nth-child(2){animation-delay:.15s;}
+  .dot:nth-child(3){animation-delay:.3s;}
+  @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-5px)}}
+
+  .chat-input-wrap{padding:.75rem 1rem;border-top:1px solid var(--border);display:flex;gap:.5rem;}
+  .chat-input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:.55rem .8rem;font-size:.82rem;outline:none;resize:none;font-family:inherit;}
+  .chat-input:focus{border-color:var(--accent);}
+  .chat-send{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:8px;color:#fff;padding:.55rem .9rem;font-size:.82rem;font-weight:700;cursor:pointer;}
+  .chat-send:hover{opacity:.9;}
+  .chat-send:disabled{opacity:.4;cursor:not-allowed;}
+
+  .quick-chips{padding:.5rem 1rem 0;display:flex;flex-wrap:wrap;gap:.4rem;}
+  .chip{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:.25rem .7rem;font-size:.72rem;color:var(--muted);cursor:pointer;}
+  .chip:hover{border-color:var(--accent);color:var(--accent);}
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-logo">SAP <span>Customer Risk</span></span>
+  <div class="nav-links">
+    <a href="/results"       class="nav-link">📊 Dashboard</a>
+    <a href="/customers"     class="nav-link">👥 Customers</a>
+    <a href="/intelligence"  class="nav-link active">🤖 AI Insights</a>
+  </div>
+</nav>
+
+<main>
+  <!-- LEFT: INSIGHTS -->
+  <div class="left-col">
+
+    <!-- Snapshot KPIs -->
+    <div class="snap-grid" id="snapGrid"></div>
+
+    <!-- AI Generated Insights -->
+    <div>
+      <div class="section-hdr">
+        <div class="section-title">🤖 AI-Generated Insights</div>
+        <button class="btn-regen" id="btnRegen" onclick="generateInsights()">↻ Regenerate</button>
+      </div>
+      <div class="insights-wrap" id="insightsWrap">
+        <!-- skeleton while loading -->
+        <div class="skeleton-card"><div class="skeleton" style="width:40%;"></div><div class="skeleton"></div><div class="skeleton" style="width:80%;"></div></div>
+        <div class="skeleton-card"><div class="skeleton" style="width:55%;"></div><div class="skeleton"></div><div class="skeleton" style="width:70%;"></div></div>
+        <div class="skeleton-card"><div class="skeleton" style="width:35%;"></div><div class="skeleton"></div><div class="skeleton" style="width:90%;"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: CHATBOT -->
+  <div class="chat-col">
+    <div class="chat-card">
+      <div class="chat-header">
+        <div class="chat-online"></div>
+        <div class="chat-header-title">AR Risk Assistant</div>
+        <span style="margin-left:auto;font-size:.72rem;color:var(--muted);">Powered by AI</span>
+      </div>
+
+      <div class="quick-chips">
+        <div class="chip" onclick="askQuick(this)">Top overdue customers</div>
+        <div class="chip" onclick="askQuick(this)">Credit limit breaches</div>
+        <div class="chip" onclick="askQuick(this)">Payment behaviour patterns</div>
+        <div class="chip" onclick="askQuick(this)">Collections priority list</div>
+        <div class="chip" onclick="askQuick(this)">Critical bucket summary</div>
+      </div>
+
+      <div class="chat-messages" id="chatMessages">
+        <div class="msg msg-ai">
+          <div class="msg-bubble">
+            👋 Hello! I'm your AR Risk Assistant. I have full access to your SAP dataset — aging data, credit utilization, payment history, and ML risk scores.<br><br>
+            Ask me anything about your customer receivables. Try the quick chips above or type your own question.
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-input-wrap">
+        <textarea class="chat-input" id="chatInput" rows="1" placeholder="Ask about customer risk, overdue trends, collections…"></textarea>
+        <button class="chat-send" id="chatSend" onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+const DATA = {{ data | safe }};
+const kpi  = DATA.kpi || {};
+const ai   = DATA.ai_context || {};
+const aging = DATA.aging_buckets || {};
+const rdist = DATA.risk_distribution || {};
+let chatHistory = [];
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const fmt  = n => n==null?'–':Number(n).toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:0});
+const fmtK = n => {
+  if(n==null)return'–';
+  if(Math.abs(n)>=1e7)return(n/1e7).toFixed(1)+' Cr';
+  if(Math.abs(n)>=1e5)return(n/1e5).toFixed(1)+' L';
+  return fmt(n);
+};
+const now = () => new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+
+// ── Snapshot KPIs ─────────────────────────────────────────────────────────────
+const snaps = [
+  {label:'Total Overdue',       val: fmtK(kpi.total_overdue),         sub:'open AR',           col:'var(--red)'},
+  {label:'Critical Customers',  val: fmt(kpi.critical),                sub:'immediate action',  col:'var(--red)'},
+  {label:'High Risk',           val: fmt(kpi.high_risk),               sub:'customers',         col:'var(--orange)'},
+  {label:'Credit Breached',     val: fmt(kpi.credit_limit_breached),   sub:'over limit',        col:'var(--yellow)'},
+  {label:'Chronic Late Payers', val: fmt((ai.payment_history_stats||{}).chronic_late_payers), sub:'>50% late', col:'var(--orange)'},
+  {label:'Avg Credit Util.',    val: ((ai.credit_stats||{}).avg_credit_utilization||0).toFixed(1)+'%', sub:'utilization', col:'var(--accent)'},
+];
+document.getElementById('snapGrid').innerHTML = snaps.map(s=>
+  `<div class="snap"><div class="snap-label">${s.label}</div>
+   <div class="snap-value" style="color:${s.col};">${s.val}</div>
+   <div class="snap-sub">${s.sub}</div></div>`
+).join('');
+
+// ── Build dataset snapshot for AI ─────────────────────────────────────────────
+function buildSnapshot() {
+  const cs = ai.credit_stats || {};
+  const ps = ai.payment_history_stats || {};
+  const top5 = (ai.all_customers||[]).slice(0,10).map(c=>
+    `${c.customer_name}: overdue ₹${fmt(c.overdue_amount)}, risk=${c.predicted_risk}, score=${c.risk_score}, util=${(c.credit_utilization||0).toFixed(1)}%, lateRate=${c.hist_late_rate!=null?(c.hist_late_rate*100).toFixed(0)+'%':'N/A'}`
+  ).join('\n');
+
+  return `=== SAP CUSTOMER ACCOUNTS RECEIVABLE DATASET SNAPSHOT ===
+Total Customers: ${kpi.total_customers}
+Total Receivable: ₹${fmt(kpi.total_receivable)}
+Total Overdue: ₹${fmt(kpi.total_overdue)}
+Risk Distribution: Critical=${rdist.Critical||0}, High=${rdist.High||0}, Medium=${rdist.Medium||0}, Low=${rdist.Low||0}
+Payment Blocked: ${kpi.payment_blocked}
+Credit Limit Breached: ${kpi.credit_limit_breached}
+
+Aging Buckets:
+- Current (not due): ₹${fmt(aging['Current'])}
+- 1-30 days: ₹${fmt(aging['1-30'])}
+- 31-60 days: ₹${fmt(aging['31-60'])}
+- 61-90 days: ₹${fmt(aging['61-90'])}
+- 91-120 days: ₹${fmt(aging['91-120'])}
+- 120+ days (critical): ₹${fmt(aging['120+'])}
+
+Credit Stats:
+- Customers over credit limit: ${cs.customers_over_credit_limit||0}
+- Customers near limit (80-100%): ${cs.customers_near_credit_limit||0}
+- Avg credit utilization: ${(cs.avg_credit_utilization||0).toFixed(1)}%
+- Max credit utilization: ${(cs.max_credit_utilization||0).toFixed(1)}%
+
+Payment History (from BSAD):
+- Chronic late payers (>50% invoices late): ${ps.chronic_late_payers||0}
+- Avg historical late rate: ${((ps.avg_historical_late_rate||0)*100).toFixed(1)}%
+
+Country Distribution (top 5): ${Object.entries(ai.country_distribution||{}).slice(0,5).map(([k,v])=>`${k}:₹${fmt(v)}`).join(', ')}
+Payment Terms: ${Object.entries(ai.payment_terms_distribution||{}).slice(0,5).map(([k,v])=>`${k}(${v})`).join(', ')}
+Company Codes: ${Object.entries(ai.company_code_distribution||{}).map(([k,v])=>`${k}:₹${fmt(v)}`).join(', ')}
+Risk Overdue Totals: ${Object.entries(ai.risk_overdue_totals||{}).map(([k,v])=>`${k}:₹${fmt(v)}`).join(', ')}
+
+Top 10 Highest Risk Customers:
+${top5}
+=== END SNAPSHOT ===`;
+}
+
+// ── AI Insights Generation ────────────────────────────────────────────────────
+async function generateInsights() {
+  const wrap = document.getElementById('insightsWrap');
+  const btn  = document.getElementById('btnRegen');
+  btn.disabled = true;
+  wrap.innerHTML = `
+    <div class="skeleton-card"><div class="skeleton" style="width:40%;"></div><div class="skeleton"></div><div class="skeleton" style="width:80%;"></div></div>
+    <div class="skeleton-card"><div class="skeleton" style="width:55%;"></div><div class="skeleton"></div><div class="skeleton" style="width:70%;"></div></div>
+    <div class="skeleton-card"><div class="skeleton" style="width:35%;"></div><div class="skeleton"></div><div class="skeleton" style="width:90%;"></div></div>
+    <div class="skeleton-card"><div class="skeleton" style="width:50%;"></div><div class="skeleton"></div><div class="skeleton" style="width:65%;"></div></div>`;
+
+  const prompt = `You are a senior SAP Accounts Receivable and credit risk analyst.
+
+${buildSnapshot()}
+
+Generate EXACTLY 5 insight cards. For each card output on separate lines:
+TITLE: <short title (4-8 words)>
+SEVERITY: <ok|warn|danger>
+ICON: <single emoji>
+BODY: <2-4 sentence insight with specific numbers from the data. Bold key numbers using **number** syntax.>
+---
+
+Focus on: overdue exposure, credit limit breaches, chronic late payers, collections priority, payment term patterns.
+Be specific and data-driven. Reference actual customer names and amounts where relevant.`;
+
+  try {
+    const resp = await fetch('/api/claude', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        system: 'You are a financial risk analyst specializing in SAP accounts receivable. Always respond with structured insight cards as instructed.',
+        messages:[{role:'user',content:prompt}],
+        max_tokens:1500,
+      })
+    });
+    const json = await resp.json();
+    if (json.error) throw new Error(json.error);
+    const text = json.content?.[0]?.text || '';
+    renderInsights(text);
+  } catch(err) {
+    wrap.innerHTML = `<div class="insight-card danger">
+      <div class="insight-title">⚠️ AI Service Unavailable</div>
+      <div class="insight-body">Could not load AI insights: ${err.message}.<br>Check that OPENROUTER_API_KEY is set on the server.</div>
+    </div>`;
+  }
+  btn.disabled = false;
+}
+
+function renderInsights(text) {
+  const blocks = text.split('---').map(b=>b.trim()).filter(Boolean);
+  const cards  = blocks.map(block => {
+    const title    = (block.match(/TITLE:\s*(.+)/)?.[1]||'Insight').trim();
+    const severity = (block.match(/SEVERITY:\s*(\w+)/)?.[1]||'warn').trim();
+    const icon     = (block.match(/ICON:\s*(\S+)/)?.[1]||'📊').trim();
+    const body     = (block.match(/BODY:\s*([\s\S]+?)(?=\n[A-Z]+:|$)/)?.[1]||block).trim()
+                      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                      .replace(/\n/g,'<br>');
+    return `<div class="insight-card ${severity}">
+      <div class="insight-title">${icon} ${title}</div>
+      <div class="insight-body">${body}</div>
+    </div>`;
+  });
+  document.getElementById('insightsWrap').innerHTML = cards.join('') || '<div class="insight-card"><div class="insight-body">No insights returned.</div></div>';
+}
+
+// ── Chatbot ───────────────────────────────────────────────────────────────────
+function appendMsg(role, html) {
+  const msgs = document.getElementById('chatMessages');
+  const div  = document.createElement('div');
+  div.className = `msg msg-${role}`;
+  div.innerHTML = `<div class="msg-bubble">${html}</div><div class="msg-time">${now()}</div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+function showTyping() {
+  const msgs = document.getElementById('chatMessages');
+  const div  = document.createElement('div');
+  div.className = 'msg msg-ai';
+  div.id = 'typingIndicator';
+  div.innerHTML = `<div class="msg-bubble"><div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function removeTyping() {
+  const el = document.getElementById('typingIndicator');
+  if (el) el.remove();
+}
+
+function mdToHtml(text) {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^### (.+)$/gm, '<strong>$1</strong>')
+    .replace(/^## (.+)$/gm, '<strong>$1</strong>')
+    .replace(/^- (.+)$/gm, '• $1')
+    .replace(/\n/g, '<br>');
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const q     = input.value.trim();
+  if (!q) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+  document.getElementById('chatSend').disabled = true;
+
+  appendMsg('user', q.replace(/</g,'&lt;'));
+  chatHistory.push({role:'user', content:q});
+
+  showTyping();
+
+  const systemPrompt = `You are an expert SAP Accounts Receivable risk analyst assistant.
+Answer questions based STRICTLY on the following dataset snapshot.
+
+${buildSnapshot()}
+
+Rules:
+- Only use data from the snapshot above. Never invent numbers.
+- Be concise and actionable. Use bullet points for lists.
+- Bold key figures using **value** syntax.
+- If asked something not in the data, say so clearly.`;
+
+  const recentHistory = chatHistory.slice(-8);
+
+  try {
+    const resp = await fetch('/api/claude', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        system: systemPrompt,
+        messages: recentHistory,
+        max_tokens: 800,
+      })
+    });
+    const json = await resp.json();
+    removeTyping();
+    if (json.error) throw new Error(json.error);
+    const reply = json.content?.[0]?.text || 'No response received.';
+    chatHistory.push({role:'assistant', content:reply});
+    appendMsg('ai', mdToHtml(reply));
+  } catch(err) {
+    removeTyping();
+    appendMsg('ai', `⚠️ Error: ${err.message}`);
+  }
+  document.getElementById('chatSend').disabled = false;
+  input.focus();
+}
+
+function askQuick(el) {
+  document.getElementById('chatInput').value = el.textContent;
+  sendMessage();
+}
+
+// Auto-resize textarea
+document.getElementById('chatInput').addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+});
+document.getElementById('chatInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+// Auto-generate insights on load
+generateInsights();
+</script>
+</body>
+</html>

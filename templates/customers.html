@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customers — SAP Customer Risk Monitor</title>
+<style>
+  :root {
+    --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3250;
+    --accent:#4f8ef7;--accent2:#7c5cfc;--green:#22c55e;--yellow:#f59e0b;
+    --red:#ef4444;--orange:#f97316;--text:#e2e8f0;--muted:#64748b;--radius:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;min-height:100vh;}
+
+  nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;gap:1rem;height:58px;}
+  .nav-logo{font-size:1.05rem;font-weight:700;color:var(--accent);}
+  .nav-logo span{color:var(--text);}
+  .nav-links{margin-left:auto;display:flex;gap:.25rem;}
+  .nav-link{padding:.4rem .85rem;border-radius:6px;font-size:.82rem;font-weight:500;color:var(--muted);text-decoration:none;transition:background .15s,color .15s;}
+  .nav-link:hover{background:var(--surface2);color:var(--text);}
+  .nav-link.active{background:var(--surface2);color:var(--accent);}
+
+  main{max-width:1400px;margin:0 auto;padding:1.5rem;}
+  .page-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.25rem;}
+  .page-title{font-size:1.4rem;font-weight:800;}
+  .count-badge{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:.25rem .75rem;font-size:.8rem;color:var(--muted);}
+  .count-badge span{color:var(--text);font-weight:700;}
+
+  /* FILTERS */
+  .filters{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.2rem;margin-bottom:1rem;display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;}
+  .filter-group{display:flex;flex-direction:column;gap:.3rem;}
+  .filter-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;}
+  .filter-input, .filter-select{background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:.4rem .7rem;font-size:.8rem;outline:none;}
+  .filter-input:focus,.filter-select:focus{border-color:var(--accent);}
+  .filter-select option{background:var(--surface);}
+  .btn-reset{background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:.4rem .8rem;font-size:.78rem;cursor:pointer;cursor:pointer;}
+  .btn-reset:hover{color:var(--text);}
+  .btn-export{background:rgba(79,142,247,.15);border:1px solid rgba(79,142,247,.3);color:var(--accent);border-radius:6px;padding:.4rem .8rem;font-size:.78rem;cursor:pointer;font-weight:600;}
+  .btn-export:hover{background:rgba(79,142,247,.25);}
+
+  /* TABLE */
+  .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  .table-scroll{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:.8rem;}
+  th{text-align:left;color:var(--muted);font-weight:600;font-size:.68rem;text-transform:uppercase;letter-spacing:.5px;padding:.7rem .9rem;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;}
+  th:hover{color:var(--text);}
+  th .sort-icon{margin-left:.3rem;opacity:.4;}
+  th.sort-asc .sort-icon::after{content:'↑';opacity:1;}
+  th.sort-desc .sort-icon::after{content:'↓';opacity:1;}
+  th .sort-icon::after{content:'↕';}
+  td{padding:.65rem .9rem;border-bottom:1px solid rgba(46,50,80,.4);white-space:nowrap;}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:rgba(79,142,247,.04);}
+
+  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.65rem;font-weight:700;text-transform:uppercase;}
+  .badge-low      {background:rgba(34,197,94,.15);color:#4ade80;}
+  .badge-medium   {background:rgba(245,158,11,.15);color:#fcd34d;}
+  .badge-high     {background:rgba(249,115,22,.18);color:#fb923c;}
+  .badge-critical {background:rgba(239,68,68,.15);color:#f87171;}
+
+  .score-bar-bg{height:4px;background:var(--surface2);border-radius:99px;margin-top:3px;min-width:60px;}
+  .score-bar{height:4px;border-radius:99px;}
+
+  .flag{font-size:.85rem;margin-right:2px;}
+  .util-warn{color:var(--yellow);}
+  .util-crit{color:var(--red);font-weight:700;}
+
+  /* MODAL */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;align-items:center;justify-content:center;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;max-width:580px;width:90%;max-height:85vh;overflow-y:auto;}
+  .modal-title{font-size:1rem;font-weight:700;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;}
+  .modal-close{background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;}
+  .modal-close:hover{color:var(--text);}
+  .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;}
+  .detail-row{background:var(--surface2);border-radius:8px;padding:.65rem .8rem;}
+  .detail-key{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:.2rem;}
+  .detail-val{font-size:.88rem;font-weight:600;color:var(--text);}
+
+  .no-results{text-align:center;padding:3rem;color:var(--muted);}
+  .pagination{display:flex;align-items:center;justify-content:space-between;padding:.8rem 1.2rem;border-top:1px solid var(--border);font-size:.8rem;color:var(--muted);}
+  .pagination-btns{display:flex;gap:.4rem;}
+  .pg-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:.3rem .7rem;font-size:.78rem;cursor:pointer;}
+  .pg-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .pg-btn:disabled{opacity:.35;cursor:not-allowed;}
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-logo">SAP <span>Customer Risk</span></span>
+  <div class="nav-links">
+    <a href="/results"       class="nav-link">📊 Dashboard</a>
+    <a href="/customers"     class="nav-link active">👥 Customers</a>
+    <a href="/intelligence"  class="nav-link">🤖 AI Insights</a>
+  </div>
+</nav>
+
+<main>
+  <div class="page-header">
+    <div class="page-title">👥 Customer Risk Table</div>
+    <div class="count-badge">Showing <span id="countShown">0</span> of <span id="countTotal">0</span> customers</div>
+  </div>
+
+  <!-- FILTERS -->
+  <div class="filters">
+    <div class="filter-group">
+      <div class="filter-label">Search</div>
+      <input class="filter-input" id="fSearch" placeholder="Customer name or ID…" style="width:200px;">
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">Risk Tier</div>
+      <select class="filter-select" id="fRisk">
+        <option value="">All Tiers</option>
+        <option value="Critical">Critical</option>
+        <option value="High">High</option>
+        <option value="Medium">Medium</option>
+        <option value="Low">Low</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">Country</div>
+      <select class="filter-select" id="fCountry"><option value="">All Countries</option></select>
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">Overdue Min (₹)</div>
+      <input class="filter-input" id="fMinOverdue" type="number" placeholder="0" style="width:120px;">
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">Flags</div>
+      <select class="filter-select" id="fFlags">
+        <option value="">All</option>
+        <option value="blocked">Payment Blocked</option>
+        <option value="breached">Credit Breached</option>
+      </select>
+    </div>
+    <button class="btn-reset" onclick="resetFilters()">✕ Reset</button>
+    <button class="btn-export" onclick="exportCSV()">⬇ Export CSV</button>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th data-col="customer_name">Customer <span class="sort-icon"></span></th>
+            <th data-col="country">Country <span class="sort-icon"></span></th>
+            <th data-col="total_receivable">Total Receivable <span class="sort-icon"></span></th>
+            <th data-col="overdue_amount">Overdue <span class="sort-icon"></span></th>
+            <th data-col="max_days_overdue">Max Days <span class="sort-icon"></span></th>
+            <th data-col="avg_days_overdue">Avg Days <span class="sort-icon"></span></th>
+            <th data-col="credit_utilization">Credit Util. <span class="sort-icon"></span></th>
+            <th data-col="hist_late_rate">Late Rate <span class="sort-icon"></span></th>
+            <th data-col="risk_score">Risk Score <span class="sort-icon"></span></th>
+            <th data-col="predicted_risk">Tier <span class="sort-icon"></span></th>
+            <th>Flags</th>
+            <th>Detail</th>
+          </tr>
+        </thead>
+        <tbody id="custBody"></tbody>
+      </table>
+    </div>
+    <div class="no-results" id="noResults" style="display:none;">No customers match the current filters.</div>
+    <div class="pagination">
+      <span id="pageInfo">Page 1</span>
+      <div class="pagination-btns">
+        <button class="pg-btn" id="pgPrev" onclick="changePage(-1)">← Prev</button>
+        <button class="pg-btn" id="pgNext" onclick="changePage(1)">Next →</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal">
+    <div class="modal-title"><span id="modalTitle">Customer Detail</span><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="detail-grid" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+const DATA      = {{ data | safe }};
+const CUSTOMERS = DATA.customers || [];
+const PAGE_SIZE = 25;
+let filtered    = [...CUSTOMERS];
+let sortCol     = 'risk_score';
+let sortDir     = 'desc';
+let page        = 1;
+
+const fmt   = n => n == null ? '–' : Number(n).toLocaleString('en-IN', {minimumFractionDigits:0,maximumFractionDigits:0});
+const fmtK  = n => {
+  if (n == null) return '–';
+  if (Math.abs(n) >= 1e7) return (n/1e7).toFixed(2)+' Cr';
+  if (Math.abs(n) >= 1e5) return (n/1e5).toFixed(1)+' L';
+  return fmt(n);
+};
+const pct   = n => n == null ? '–' : (n*100).toFixed(1)+'%';
+const badge = r => {
+  const map={Low:'badge-low',Medium:'badge-medium',High:'badge-high',Critical:'badge-critical'};
+  return `<span class="badge ${map[r]||'badge-medium'}">${r}</span>`;
+};
+const riskColor = r => ({Low:'#22c55e',Medium:'#f59e0b',High:'#f97316',Critical:'#ef4444'}[r]||'#64748b');
+
+// Populate country filter
+const countries = [...new Set(CUSTOMERS.map(c=>c.country).filter(Boolean))].sort();
+const fCountry  = document.getElementById('fCountry');
+countries.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;fCountry.appendChild(o);});
+
+// Filter & sort
+function applyFilters() {
+  const s   = document.getElementById('fSearch').value.toLowerCase();
+  const r   = document.getElementById('fRisk').value;
+  const co  = document.getElementById('fCountry').value;
+  const min = parseFloat(document.getElementById('fMinOverdue').value)||0;
+  const fl  = document.getElementById('fFlags').value;
+
+  filtered = CUSTOMERS.filter(c => {
+    if (s && !(c.customer_name||'').toLowerCase().includes(s) && !(c.customer_id||'').toLowerCase().includes(s)) return false;
+    if (r  && c.predicted_risk !== r) return false;
+    if (co && c.country !== co) return false;
+    if (min && (c.overdue_amount||0) < min) return false;
+    if (fl === 'blocked'  && !c.payment_blocked) return false;
+    if (fl === 'breached' && !c.credit_limit_breached) return false;
+    return true;
+  });
+
+  filtered.sort((a,b) => {
+    let av = a[sortCol], bv = b[sortCol];
+    if (typeof av === 'string') av = av.toLowerCase(), bv = (bv||'').toLowerCase();
+    av = av ?? -Infinity; bv = bv ?? -Infinity;
+    return sortDir === 'asc' ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
+  });
+
+  page = 1;
+  render();
+}
+
+function render() {
+  const start  = (page-1)*PAGE_SIZE;
+  const slice  = filtered.slice(start, start+PAGE_SIZE);
+  const tbody  = document.getElementById('custBody');
+  const noRes  = document.getElementById('noResults');
+
+  document.getElementById('countShown').textContent = filtered.length;
+  document.getElementById('countTotal').textContent = CUSTOMERS.length;
+
+  if (!filtered.length) { tbody.innerHTML=''; noRes.style.display='block'; } else noRes.style.display='none';
+
+  const utilClass = u => u > 100 ? 'util-crit' : u > 80 ? 'util-warn' : '';
+
+  tbody.innerHTML = slice.map((c,i) => {
+    const score = c.risk_score||0;
+    const flags = [
+      c.payment_blocked       ? '<span class="flag" title="Payment Blocked">🔒</span>' : '',
+      c.credit_limit_breached ? '<span class="flag" title="Credit Limit Breached">⚠️</span>' : '',
+    ].join('');
+    return `<tr>
+      <td><strong>${c.customer_name||'–'}</strong><br><span style="font-size:.7rem;color:var(--muted);">${c.customer_id}</span></td>
+      <td>${c.country||'–'}</td>
+      <td>₹ ${fmtK(c.total_receivable)}</td>
+      <td>₹ ${fmtK(c.overdue_amount)}</td>
+      <td>${c.max_days_overdue!=null?Math.round(c.max_days_overdue):'–'}</td>
+      <td>${c.avg_days_overdue!=null?c.avg_days_overdue.toFixed(1):'–'}</td>
+      <td class="${utilClass(c.credit_utilization)}">${c.credit_utilization!=null?c.credit_utilization.toFixed(1)+'%':'–'}</td>
+      <td>${c.hist_late_rate!=null?pct(c.hist_late_rate):'–'}</td>
+      <td>
+        ${score.toFixed(1)}
+        <div class="score-bar-bg"><div class="score-bar" style="width:${score}%;background:${riskColor(c.predicted_risk)};"></div></div>
+      </td>
+      <td>${badge(c.predicted_risk)}</td>
+      <td>${flags||'<span style="color:var(--muted);">–</span>'}</td>
+      <td><button onclick="showDetail(${start+i})" style="background:var(--surface2);border:1px solid var(--border);color:var(--accent);border-radius:5px;padding:2px 8px;font-size:.72rem;cursor:pointer;">View</button></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('pageInfo').textContent = `Page ${page} of ${Math.max(1,Math.ceil(filtered.length/PAGE_SIZE))}`;
+  document.getElementById('pgPrev').disabled = page <= 1;
+  document.getElementById('pgNext').disabled = page >= Math.ceil(filtered.length/PAGE_SIZE);
+}
+
+// Sorting
+document.querySelectorAll('th[data-col]').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    if (sortCol === col) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    else { sortCol = col; sortDir = 'desc'; }
+    document.querySelectorAll('th').forEach(t => { t.classList.remove('sort-asc','sort-desc'); });
+    th.classList.add('sort-' + sortDir);
+    applyFilters();
+  });
+});
+
+// Set initial sort header
+document.querySelector('th[data-col="risk_score"]').classList.add('sort-desc');
+
+function changePage(dir) { page += dir; render(); }
+function resetFilters() {
+  ['fSearch','fMinOverdue'].forEach(id=>document.getElementById(id).value='');
+  ['fRisk','fCountry','fFlags'].forEach(id=>document.getElementById(id).value='');
+  applyFilters();
+}
+
+// Export CSV
+function exportCSV() {
+  const cols = ['customer_id','customer_name','country','company_code','total_receivable',
+                'overdue_amount','max_days_overdue','avg_days_overdue','pct_critical_invoices',
+                'bucket_120plus','overdue_ratio','credit_utilization','credit_limit_breached',
+                'hist_late_rate','hist_avg_late_days','risk_score','predicted_risk','payment_blocked'];
+  const header = cols.join(',');
+  const rows = filtered.map(c => cols.map(k => {
+    const v = c[k];
+    if (v == null) return '';
+    if (typeof v === 'string' && v.includes(',')) return `"${v}"`;
+    return v;
+  }).join(','));
+  const blob = new Blob([header+'\n'+rows.join('\n')], {type:'text/csv'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'customer_risk_analysis.csv'; a.click();
+}
+
+// Detail Modal
+function showDetail(idx) {
+  const c = filtered[idx];
+  document.getElementById('modalTitle').textContent = `${c.customer_name} (${c.customer_id})`;
+  const fields = [
+    ['Risk Score',        c.risk_score!=null?c.risk_score.toFixed(1):'–'],
+    ['Risk Tier',         c.predicted_risk||'–'],
+    ['Country',           c.country||'–'],
+    ['Company Code',      c.company_code||'–'],
+    ['Payment Terms',     c.payment_terms||'–'],
+    ['Total Receivable',  '₹ '+fmt(c.total_receivable)],
+    ['Overdue Amount',    '₹ '+fmt(c.overdue_amount)],
+    ['Total Invoices',    c.total_invoices||'–'],
+    ['Max Days Overdue',  c.max_days_overdue!=null?Math.round(c.max_days_overdue):'–'],
+    ['Avg Days Overdue',  c.avg_days_overdue!=null?c.avg_days_overdue.toFixed(1):'–'],
+    ['120+ Days Amt',     '₹ '+fmt(c.bucket_120plus)],
+    ['Overdue Ratio',     c.overdue_ratio!=null?(c.overdue_ratio*100).toFixed(1)+'%':'–'],
+    ['Credit Limit',      '₹ '+fmt(c.credit_limit)],
+    ['Open Balance',      '₹ '+fmt(c.open_balance)],
+    ['Credit Utilization',c.credit_utilization!=null?c.credit_utilization.toFixed(1)+'%':'–'],
+    ['SAP Risk Class',    c.sap_risk_num||'–'],
+    ['Hist. Late Rate',   c.hist_late_rate!=null?pct(c.hist_late_rate):'–'],
+    ['Hist. Avg Late Days',c.hist_avg_late_days!=null?c.hist_avg_late_days.toFixed(1):'–'],
+    ['Payment Blocked',   c.payment_blocked?'🔒 Yes':'No'],
+    ['Credit Breached',   c.credit_limit_breached?'⚠️ Yes':'No'],
+  ];
+  document.getElementById('modalBody').innerHTML = fields.map(([k,v])=>
+    `<div class="detail-row"><div class="detail-key">${k}</div><div class="detail-val">${v}</div></div>`
+  ).join('');
+  document.getElementById('detailModal').classList.add('open');
+}
+function closeModal() { document.getElementById('detailModal').classList.remove('open'); }
+document.getElementById('detailModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeModal(); });
+
+// Filter listeners
+['fSearch','fMinOverdue'].forEach(id=>document.getElementById(id).addEventListener('input', applyFilters));
+['fRisk','fCountry','fFlags'].forEach(id=>document.getElementById(id).addEventListener('change', applyFilters));
+
+// Initial render
+applyFilters();
+</script>
+</body>
+</html>

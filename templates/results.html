@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — SAP Customer Risk Monitor</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3250;
+    --accent:#4f8ef7;--accent2:#7c5cfc;--green:#22c55e;--yellow:#f59e0b;
+    --red:#ef4444;--orange:#f97316;--text:#e2e8f0;--muted:#64748b;--radius:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;min-height:100vh;}
+
+  /* NAV */
+  nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;gap:1rem;height:58px;}
+  .nav-logo{font-size:1.05rem;font-weight:700;color:var(--accent);}
+  .nav-logo span{color:var(--text);}
+  .nav-links{margin-left:auto;display:flex;gap:.25rem;}
+  .nav-link{padding:.4rem .85rem;border-radius:6px;font-size:.82rem;font-weight:500;color:var(--muted);text-decoration:none;transition:background .15s,color .15s;}
+  .nav-link:hover{background:var(--surface2);color:var(--text);}
+  .nav-link.active{background:var(--surface2);color:var(--accent);}
+
+  /* LAYOUT */
+  main{max-width:1200px;margin:0 auto;padding:1.5rem;}
+  .page-title{font-size:1.4rem;font-weight:800;margin-bottom:1.25rem;}
+
+  /* KPI STRIP */
+  .kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.75rem;margin-bottom:1.5rem;}
+  .kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.1rem 1.2rem;}
+  .kpi-label{font-size:.72rem;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:.4rem;}
+  .kpi-value{font-size:1.65rem;font-weight:800;line-height:1;}
+  .kpi-sub{font-size:.72rem;color:var(--muted);margin-top:.3rem;}
+  .kpi.danger .kpi-value{color:var(--red);}
+  .kpi.warn   .kpi-value{color:var(--yellow);}
+  .kpi.ok     .kpi-value{color:var(--green);}
+  .kpi.blue   .kpi-value{color:var(--accent);}
+  .kpi.purple .kpi-value{color:var(--accent2);}
+
+  /* CHART GRID */
+  .chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;}
+  @media(max-width:760px){.chart-grid{grid-template-columns:1fr;}}
+  .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.2rem;}
+  .chart-title{font-size:.85rem;font-weight:700;color:var(--text);margin-bottom:1rem;}
+  .chart-wrap{position:relative;height:240px;}
+
+  /* AGING TABLE */
+  .section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.2rem;margin-bottom:1.5rem;}
+  .section-title{font-size:.9rem;font-weight:700;margin-bottom:1rem;}
+  table{width:100%;border-collapse:collapse;font-size:.82rem;}
+  th{text-align:left;color:var(--muted);font-weight:600;text-transform:uppercase;font-size:.7rem;letter-spacing:.5px;padding:.6rem .8rem;border-bottom:1px solid var(--border);}
+  td{padding:.65rem .8rem;border-bottom:1px solid rgba(46,50,80,.5);}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:rgba(79,142,247,.04);}
+  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.68rem;font-weight:700;text-transform:uppercase;}
+  .badge-low      {background:rgba(34,197,94,.15);color:#4ade80;}
+  .badge-medium   {background:rgba(245,158,11,.15);color:#fcd34d;}
+  .badge-high     {background:rgba(249,115,22,.18);color:#fb923c;}
+  .badge-critical {background:rgba(239,68,68,.15);color:#f87171;}
+  .badge-current  {background:rgba(79,142,247,.15);color:#93c5fd;}
+  .risk-bar-bg{height:5px;background:var(--surface2);border-radius:99px;margin-top:4px;}
+  .risk-bar{height:5px;border-radius:99px;}
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-logo">SAP <span>Customer Risk</span></span>
+  <div class="nav-links">
+    <a href="/results"       class="nav-link active">📊 Dashboard</a>
+    <a href="/customers"     class="nav-link">👥 Customers</a>
+    <a href="/intelligence"  class="nav-link">🤖 AI Insights</a>
+  </div>
+</nav>
+
+<main>
+  <div class="page-title">📊 Customer Risk Dashboard</div>
+
+  <!-- KPIs -->
+  <div class="kpi-strip" id="kpiStrip"></div>
+
+  <!-- CHARTS ROW 1 -->
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">Aging Bucket Distribution (Amount)</div>
+      <div class="chart-wrap"><canvas id="agingBar"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Risk Category Distribution (Customers)</div>
+      <div class="chart-wrap"><canvas id="riskDoughnut"></canvas></div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 2 -->
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">Overdue Amount by Risk Tier</div>
+      <div class="chart-wrap"><canvas id="riskAmtBar"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Risk Score Distribution</div>
+      <div class="chart-wrap"><canvas id="scoreHist"></canvas></div>
+    </div>
+  </div>
+
+  <!-- TOP 10 TABLE -->
+  <div class="section">
+    <div class="section-title">🔴 Top 10 Highest-Risk Customers</div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Customer</th><th>Overdue Amount</th>
+            <th>Risk Score</th><th>Risk Tier</th>
+            <th>Credit Util.</th><th>Late Rate</th><th>Flags</th>
+          </tr>
+        </thead>
+        <tbody id="top10Body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- AGING BREAKDOWN TABLE -->
+  <div class="section">
+    <div class="section-title">📅 Aging Bucket Breakdown</div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr><th>Bucket</th><th>Days Overdue</th><th>Total Amount</th><th>Risk Level</th><th>Share of Overdue</th></tr>
+        </thead>
+        <tbody id="agingBody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script>
+const DATA = {{ data | safe }};
+const kpi  = DATA.kpi;
+const aging = DATA.aging_buckets;
+const rdist = DATA.risk_distribution;
+const top10 = DATA.top10;
+const scatter = DATA.scatter || [];
+const ai = DATA.ai_context || {};
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+const fmt  = n => (n == null ? '–' : Number(n).toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:0}));
+const fmtK = n => {
+  if (n == null) return '–';
+  if (Math.abs(n) >= 1e7) return (n/1e7).toFixed(1) + ' Cr';
+  if (Math.abs(n) >= 1e5) return (n/1e5).toFixed(1) + ' L';
+  return fmt(n);
+};
+const pct  = n => n == null ? '–' : (n*100).toFixed(1) + '%';
+const badge = r => {
+  const map = {Low:'badge-low',Medium:'badge-medium',High:'badge-high',Critical:'badge-critical',Current:'badge-current'};
+  return `<span class="badge ${map[r]||'badge-medium'}">${r}</span>`;
+};
+const riskColor = r => ({Low:'#22c55e',Medium:'#f59e0b',High:'#f97316',Critical:'#ef4444'}[r]||'#64748b');
+
+// ── KPI Strip ─────────────────────────────────────────────────────────────────
+const kpiData = [
+  {label:'Total Customers',    value: fmt(kpi.total_customers),  sub:'in dataset',           cls:'blue'},
+  {label:'Total Receivable',   value: fmtK(kpi.total_receivable),sub:'open AR exposure',     cls:'blue'},
+  {label:'Total Overdue',      value: fmtK(kpi.total_overdue),   sub:'past due date',        cls:'warn'},
+  {label:'High Risk',          value: fmt(kpi.high_risk),         sub:'customers',            cls:'warn'},
+  {label:'Critical',           value: fmt(kpi.critical),          sub:'immediate action',     cls:'danger'},
+  {label:'Credit Breached',    value: fmt(kpi.credit_limit_breached), sub:'over credit limit',cls:'danger'},
+  {label:'Payment Blocked',    value: fmt(kpi.payment_blocked),   sub:'KNB1 block active',    cls:'purple'},
+];
+document.getElementById('kpiStrip').innerHTML = kpiData.map(k =>
+  `<div class="kpi ${k.cls}">
+     <div class="kpi-label">${k.label}</div>
+     <div class="kpi-value">${k.value}</div>
+     <div class="kpi-sub">${k.sub}</div>
+   </div>`
+).join('');
+
+// ── Chart defaults ─────────────────────────────────────────────────────────
+Chart.defaults.color = '#64748b';
+Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+Chart.defaults.font.size   = 11;
+const gridColor = 'rgba(46,50,80,.6)';
+
+// ── Aging Bar ────────────────────────────────────────────────────────────────
+const agingBuckets = ['Current','1-30','31-60','61-90','91-120','120+'];
+const agingColors  = ['#4f8ef7','#22c55e','#f59e0b','#f97316','#ef4444','#dc2626'];
+new Chart(document.getElementById('agingBar'), {
+  type:'bar',
+  data:{
+    labels: agingBuckets,
+    datasets:[{
+      label:'Amount',
+      data: agingBuckets.map(b => aging[b] || 0),
+      backgroundColor: agingColors,
+      borderRadius: 6, borderSkipped: false,
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>' ₹ '+fmt(c.raw)}}},
+    scales:{
+      x:{grid:{color:gridColor}},
+      y:{grid:{color:gridColor},ticks:{callback:v=>fmtK(v)}}
+    }
+  }
+});
+
+// ── Risk Doughnut ─────────────────────────────────────────────────────────────
+const riskLabels = ['Low','Medium','High','Critical'];
+const riskColors = ['#22c55e','#f59e0b','#f97316','#ef4444'];
+new Chart(document.getElementById('riskDoughnut'), {
+  type:'doughnut',
+  data:{
+    labels: riskLabels,
+    datasets:[{
+      data: riskLabels.map(r => rdist[r] || 0),
+      backgroundColor: riskColors,
+      borderColor: '#1a1d27', borderWidth: 3,
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false, cutout:'62%',
+    plugins:{
+      legend:{position:'right', labels:{color:'#94a3b8', boxWidth:12}},
+      tooltip:{callbacks:{label:c=>` ${c.label}: ${c.raw} customers`}}
+    }
+  }
+});
+
+// ── Risk Overdue Amount Bar ───────────────────────────────────────────────────
+const riskOvAmts = ai.risk_overdue_totals || {};
+new Chart(document.getElementById('riskAmtBar'), {
+  type:'bar',
+  data:{
+    labels: riskLabels,
+    datasets:[{
+      label:'Overdue Amount',
+      data: riskLabels.map(r => riskOvAmts[r] || 0),
+      backgroundColor: riskColors,
+      borderRadius:6, borderSkipped:false,
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>' ₹ '+fmt(c.raw)}}},
+    scales:{
+      x:{grid:{color:gridColor}},
+      y:{grid:{color:gridColor},ticks:{callback:v=>fmtK(v)}}
+    }
+  }
+});
+
+// ── Risk Score Histogram ──────────────────────────────────────────────────────
+const scores = scatter.map(c => c.risk_score || 0);
+const histBins = [0,10,20,30,40,50,60,70,80,90,100];
+const histCounts = new Array(histBins.length-1).fill(0);
+scores.forEach(s => {
+  const idx = Math.min(Math.floor(s/10), histBins.length-2);
+  histCounts[idx]++;
+});
+new Chart(document.getElementById('scoreHist'), {
+  type:'bar',
+  data:{
+    labels: histBins.slice(0,-1).map((b,i)=>`${b}-${histBins[i+1]}`),
+    datasets:[{
+      label:'Customers',
+      data: histCounts,
+      backgroundColor: histBins.slice(0,-1).map((_,i)=>`hsl(${220-i*20},70%,55%)`),
+      borderRadius:4, borderSkipped:false,
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{
+      x:{grid:{color:gridColor}},
+      y:{grid:{color:gridColor},ticks:{stepSize:1}}
+    }
+  }
+});
+
+// ── Top 10 Table ──────────────────────────────────────────────────────────────
+document.getElementById('top10Body').innerHTML = top10.map((c,i) => {
+  const util = c.credit_utilization != null ? c.credit_utilization.toFixed(1)+'%' : '–';
+  const utilStyle = c.credit_utilization > 100 ? 'color:var(--red);font-weight:700;' :
+                    c.credit_utilization > 80  ? 'color:var(--yellow);' : '';
+  const lateRate = c.hist_late_rate != null ? pct(c.hist_late_rate) : '–';
+  const flags = [
+    c.payment_blocked       ? '<span style="font-size:.8rem;" title="Payment Blocked">🔒</span>' : '',
+    c.credit_limit_breached ? '<span style="font-size:.8rem;" title="Credit Limit Breached">⚠️</span>' : '',
+  ].join('');
+  const score = c.risk_score != null ? c.risk_score : 0;
+  const barColor = riskColor(c.predicted_risk);
+  return `<tr>
+    <td style="color:var(--muted);">${i+1}</td>
+    <td><strong>${c.customer_name}</strong><br><span style="font-size:.7rem;color:var(--muted);">${c.customer_id}</span></td>
+    <td>₹ ${fmt(c.overdue_amount)}</td>
+    <td>
+      ${score.toFixed(1)}
+      <div class="risk-bar-bg"><div class="risk-bar" style="width:${score}%;background:${barColor};"></div></div>
+    </td>
+    <td>${badge(c.predicted_risk)}</td>
+    <td style="${utilStyle}">${util}</td>
+    <td>${lateRate}</td>
+    <td>${flags}</td>
+  </tr>`;
+}).join('');
+
+// ── Aging Table ───────────────────────────────────────────────────────────────
+const agingMeta = {
+  'Current': {days:'≤ 0',   risk:'No Risk',  cls:'badge-current'},
+  '1-30':    {days:'1–30',  risk:'Low',      cls:'badge-low'},
+  '31-60':   {days:'31–60', risk:'Medium',   cls:'badge-medium'},
+  '61-90':   {days:'61–90', risk:'High',     cls:'badge-high'},
+  '91-120':  {days:'91–120',risk:'Severe',   cls:'badge-high'},
+  '120+':    {days:'>120',  risk:'Critical', cls:'badge-critical'},
+};
+const totalOverdue = Object.entries(aging).filter(([k])=>k!=='Current').reduce((s,[,v])=>s+v,0);
+document.getElementById('agingBody').innerHTML = agingBuckets.map(b => {
+  const amt = aging[b] || 0;
+  const meta = agingMeta[b];
+  const share = b === 'Current' ? '–' : (totalOverdue > 0 ? (amt/totalOverdue*100).toFixed(1)+'%' : '0%');
+  return `<tr>
+    <td><strong>${b}</strong></td>
+    <td style="color:var(--muted);">${meta.days} days</td>
+    <td>₹ ${fmt(amt)}</td>
+    <td><span class="badge ${meta.cls}">${meta.risk}</span></td>
+    <td>${share}</td>
+  </tr>`;
+}).join('');
+</script>
+</body>
+</html>
